@@ -368,25 +368,6 @@ const CameraScreen = ({ navigation }) => {
             onPress: () => setImageUri(null) 
           },
           { 
-            text: 'Use Mock Data', 
-            onPress: () => {
-              const mockData = {
-                name: 'OCR Failed - Mock Data',
-                idNumber: generateRandomID(),
-                dateOfBirth: 'Not detected',
-                address: 'Not detected',
-                issueDate: new Date().toISOString().split('T')[0],
-                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                confidence: 0.1,
-              };
-              navigation.navigate('Result', {
-                imageUri: uri,
-                ocrData: mockData,
-                rawText: 'OCR processing failed, showing mock data',
-              });
-            }
-          },
-          { 
             text: 'Cancel',
             style: 'cancel',
             onPress: () => {
