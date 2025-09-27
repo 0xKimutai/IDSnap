@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
 import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Mock implementations for file operations (fallback when Expo is not available)
 const FileSystem = {
   writeAsStringAsync: async (uri, content) => {
@@ -70,7 +71,10 @@ const ResultScreen = ({ navigation, route }) => {
     try {
       setIsSaving(true);
       
-      // In a real app, you would save the data to your database here
+      // Save to scan history
+      await saveToHistory();
+      
+      // Simulate save operation
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       Alert.alert(
@@ -79,7 +83,7 @@ const ResultScreen = ({ navigation, route }) => {
         [
           {
             text: 'View History',
-            onPress: () => navigation.navigate('Home'),
+            onPress: () => navigation.navigate('History'),
           },
           {
             text: 'Scan Another',
@@ -92,6 +96,35 @@ const ResultScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to save the scan results. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const saveToHistory = async () => {
+    try {
+      // Get existing history
+      const existingHistory = await AsyncStorage.getItem('@scan_history');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Create new history item
+      const newHistoryItem = {
+        id: Date.now().toString(),
+        timestamp: timestamp || Date.now(),
+        data: data,
+        imageUri: imageUri
+      };
+      
+      // Add to beginning of history array
+      history.unshift(newHistoryItem);
+      
+      // Keep only last 50 items to prevent storage bloat
+      const limitedHistory = history.slice(0, 50);
+      
+      // Save back to storage
+      await AsyncStorage.setItem('@scan_history', JSON.stringify(limitedHistory));
+      
+      console.log('Saved to history:', newHistoryItem);
+    } catch (error) {
+      console.error('Error saving to history:', error);
     }
   };
 

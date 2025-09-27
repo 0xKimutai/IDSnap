@@ -59,43 +59,9 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleHistoryPress = () => {
-    // TODO: Implement history screen
-    console.log('History feature coming soon');
+    navigation.navigate('History');
   };
 
-  const handleTestResultPress = () => {
-    // Navigate to Result screen with Kenyan ID mock data for testing
-    const mockScanData = {
-      data: {
-        serialNumber: 'KE-12345678-9',
-        idNumber: '12345678',
-        dateOfBirth: '15/03/1985',
-        sex: 'M',
-        districtOfBirth: 'NAIROBI',
-        placeOfIssue: 'NAIROBI',
-        dateOfIssue: '12/08/2020',
-        holdersSign: 'Present'
-      },
-      confidence: {
-        serialNumber: 0.94,
-        idNumber: 0.96,
-        dateOfBirth: 0.91,
-        sex: 0.98,
-        districtOfBirth: 0.89,
-        placeOfIssue: 0.92,
-        dateOfIssue: 0.93,
-        holdersSign: 0.87
-      },
-      timestamp: Date.now()
-    };
-    
-    console.log('Navigating to Result with Kenyan ID mock data:', mockScanData);
-    
-    navigation.navigate('Result', {
-      scanData: mockScanData,
-      imageUri: 'https://via.placeholder.com/400x250/FF6B35/FFFFFF?text=Kenyan+ID+Card'
-    });
-  };
 
   return (
     <Animated.View 
@@ -144,21 +110,6 @@ const HomeScreen = ({ navigation }) => {
               <View style={styles.buttonTextContainer}>
                 <Text style={styles.secondaryButtonText}>View History</Text>
                 <Text style={styles.buttonSubtext}>Recent scans and results</Text>
-              </View>
-              <Text style={styles.buttonArrow}>→</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={handleTestResultPress}
-            activeOpacity={0.8}
-          >
-            <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>🧪</Text>
-              <View style={styles.buttonTextContainer}>
-                <Text style={styles.testButtonText}>Test Results</Text>
-                <Text style={styles.buttonSubtext}>View sample scan results</Text>
               </View>
               <Text style={styles.buttonArrow}>→</Text>
             </View>
@@ -331,14 +282,6 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef',
     overflow: 'hidden',
   },
-  testButton: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#bbdefb',
-    overflow: 'hidden',
-    marginTop: 12,
-  },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -361,12 +304,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1a1a1a',
-    marginBottom: 2,
-  },
-  testButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1976d2',
     marginBottom: 2,
   },
   buttonSubtext: {
