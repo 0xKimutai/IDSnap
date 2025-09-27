@@ -360,8 +360,8 @@ const CameraScreen = ({ navigation }) => {
       
       // Show error to user
       Alert.alert(
-        'OCR Processing Failed',
-        `Unable to extract text from image: ${error.message}`,
+        'Processing Failed',
+        `Unable to extract information from image: ${error.message}`,
         [
           { 
             text: 'Try Again', 

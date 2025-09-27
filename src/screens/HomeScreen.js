@@ -77,7 +77,7 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.appIcon}>📱</Text>
           <Text style={styles.title}>IDSnap Scanner</Text>
           <Text style={styles.subtitle}>
-            Advanced OCR technology for instant ID card data extraction
+            Advanced technology for instant ID card data extraction
           </Text>
           <View style={styles.versionBadge}>
             <Text style={styles.versionText}>v1.0</Text>
@@ -140,8 +140,8 @@ const HomeScreen = ({ navigation }) => {
           
           <FeatureCard
             icon="🔍"
-            title="High Accuracy OCR"
-            description="Advanced ML algorithms ensure precise text extraction from various ID formats"
+            title="High Accuracy Scanning"
+            description="Advanced algorithms ensure precise text extraction from various ID formats"
             color="#2196F3"
           />
           
@@ -173,7 +173,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.tipsList}>
             <TipItem 
               icon="💡"
-              text="Use good lighting for best OCR results"
+              text="Use good lighting for best scanning results"
             />
             <TipItem 
               icon="📐"

@@ -62,11 +62,11 @@ const PreviewScreen = ({ navigation, route }) => {
     try {
       setIsProcessing(true);
       
-      // In a real app, you would send the image to your OCR service here
+      // In a real app, you would send the image to your processing service here
       // For now, we'll simulate the API call with a timeout
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Mock OCR results
+      // Mock processing results
       const mockOcrData = {
         data: {
           fullName: 'John Doe',
