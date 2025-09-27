@@ -63,6 +63,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
 
+
   return (
     <Animated.View 
       style={[
@@ -109,7 +110,7 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.buttonIcon}>📜</Text>
               <View style={styles.buttonTextContainer}>
                 <Text style={styles.secondaryButtonText}>View History</Text>
-                <Text style={styles.buttonSubtext}>Recent scans and results</Text>
+                <Text style={styles.buttonSubtext}>Sample scans and results</Text>
               </View>
               <Text style={styles.buttonArrow}>→</Text>
             </View>

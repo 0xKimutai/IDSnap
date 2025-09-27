@@ -37,11 +37,12 @@ const HistoryScreen = ({ navigation }) => {
   const loadScanHistory = async () => {
     try {
       setLoading(true);
-      const historyData = await AsyncStorage.getItem('@scan_history');
-      if (historyData) {
-        const history = JSON.parse(historyData);
-        setScanHistory(history.sort((a, b) => b.timestamp - a.timestamp));
-      } else {
+      // Always use fresh mock data to ensure names are included
+      // const historyData = await AsyncStorage.getItem('@scan_history');
+      // if (historyData) {
+      //   const history = JSON.parse(historyData);
+      //   setScanHistory(history.sort((a, b) => b.timestamp - a.timestamp));
+      // } else {
         // Add some mock history data for demonstration
         const mockHistory = [
           {
@@ -50,9 +51,13 @@ const HistoryScreen = ({ navigation }) => {
             data: {
               serialNumber: 'KE-12345678-9',
               idNumber: '12345678',
+              name: 'JOHN MWANGI KAMAU',
               dateOfBirth: '15/03/1985',
               sex: 'M',
-              districtOfBirth: 'NAIROBI'
+              districtOfBirth: 'NAIROBI',
+              placeOfIssue: 'NAIROBI',
+              dateOfIssue: '12/08/2020',
+              holdersSign: 'Present'
             },
             imageUri: 'https://via.placeholder.com/200x120/FF6B35/FFFFFF?text=ID+1'
           },
@@ -62,9 +67,13 @@ const HistoryScreen = ({ navigation }) => {
             data: {
               serialNumber: 'KE-87654321-0',
               idNumber: '87654321',
+              name: 'MARY AKINYI OCHIENG',
               dateOfBirth: '22/07/1992',
               sex: 'F',
-              districtOfBirth: 'MOMBASA'
+              districtOfBirth: 'MOMBASA',
+              placeOfIssue: 'MOMBASA',
+              dateOfIssue: '05/11/2019',
+              holdersSign: 'Present'
             },
             imageUri: 'https://via.placeholder.com/200x120/4CAF50/FFFFFF?text=ID+2'
           },
@@ -74,16 +83,20 @@ const HistoryScreen = ({ navigation }) => {
             data: {
               serialNumber: 'KE-11223344-5',
               idNumber: '11223344',
+              name: 'PETER KIPCHOGE ROTICH',
               dateOfBirth: '10/12/1988',
               sex: 'M',
-              districtOfBirth: 'KISUMU'
+              districtOfBirth: 'KISUMU',
+              placeOfIssue: 'KISUMU',
+              dateOfIssue: '28/04/2021',
+              holdersSign: 'Present'
             },
             imageUri: 'https://via.placeholder.com/200x120/2196F3/FFFFFF?text=ID+3'
           }
         ];
         setScanHistory(mockHistory);
         await AsyncStorage.setItem('@scan_history', JSON.stringify(mockHistory));
-      }
+      // }
     } catch (error) {
       console.error('Error loading scan history:', error);
       Alert.alert('Error', 'Failed to load scan history');
@@ -103,8 +116,12 @@ const HistoryScreen = ({ navigation }) => {
       return (
         item.data.idNumber?.toLowerCase().includes(searchLower) ||
         item.data.serialNumber?.toLowerCase().includes(searchLower) ||
+        item.data.name?.toLowerCase().includes(searchLower) ||
         item.data.districtOfBirth?.toLowerCase().includes(searchLower) ||
-        item.data.sex?.toLowerCase().includes(searchLower)
+        item.data.placeOfIssue?.toLowerCase().includes(searchLower) ||
+        item.data.sex?.toLowerCase().includes(searchLower) ||
+        item.data.dateOfBirth?.toLowerCase().includes(searchLower) ||
+        item.data.dateOfIssue?.toLowerCase().includes(searchLower)
       );
     });
     setFilteredHistory(filtered);
@@ -123,9 +140,13 @@ const HistoryScreen = ({ navigation }) => {
         confidence: {
           serialNumber: 0.95,
           idNumber: 0.98,
+          name: 0.96,
           dateOfBirth: 0.92,
           sex: 0.99,
-          districtOfBirth: 0.88
+          districtOfBirth: 0.88,
+          placeOfIssue: 0.91,
+          dateOfIssue: 0.94,
+          holdersSign: 0.87
         },
         timestamp: item.timestamp
       },
@@ -228,7 +249,7 @@ const HistoryScreen = ({ navigation }) => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by ID number, district, etc..."
+          placeholder="Search by name, ID number, district, dates..."
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -252,7 +273,7 @@ const HistoryScreen = ({ navigation }) => {
               <View style={styles.itemContent}>
                 <View style={styles.itemHeader}>
                   <Text style={styles.itemTitle}>
-                    ID: {item.data.idNumber || 'Unknown'}
+                    {item.data.name || 'Unknown Name'}
                   </Text>
                   <Text style={styles.itemDate}>
                     {formatDate(item.timestamp)}
@@ -260,6 +281,9 @@ const HistoryScreen = ({ navigation }) => {
                 </View>
                 
                 <View style={styles.itemDetails}>
+                  <Text style={styles.itemDetail}>
+                    ID: {item.data.idNumber || 'N/A'}
+                  </Text>
                   <Text style={styles.itemDetail}>
                     Serial: {item.data.serialNumber || 'N/A'}
                   </Text>
