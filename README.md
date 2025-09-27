@@ -1,3 +1,37 @@
+# IDSnap - ID Card Scanner App
+
+A comprehensive React Native application for scanning and extracting data from ID cards using advanced OCR technology.
+
+## 🚀 Features
+
+- **Advanced OCR Processing**: Extract text from ID cards with high accuracy
+- **Multiple ID Card Support**: Generic ID cards, driver's licenses, passports, and more
+- **Image Enhancement**: Automatic image preprocessing for better OCR results
+- **Data Validation**: Intelligent validation and error checking of extracted data
+- **Export Options**: Save results in JSON, CSV, or print directly
+- **Scan History**: Keep track of all your scanned documents
+- **Offline Processing**: All OCR processing happens locally on your device
+- **Modern UI**: Clean, intuitive interface with Material Design components
+
+## 📱 App Overview
+
+The app includes four main screens:
+- **Home Screen**: Welcome screen with quick stats and features overview
+- **Camera Screen**: Camera interface with ID card frame guide
+- **Preview Screen**: Review captured image before processing
+- **Result Screen**: Display extracted data with editing capabilities
+
+## 🎯 Current Status
+
+This is a **demo version** with a complete UI implementation. The Metro bundler is running successfully, and you can navigate through all screens. Current limitations:
+- Camera functionality is simulated (shows placeholder UI)
+- OCR processing returns mock data for demonstration
+- Export features show alerts instead of actual functionality
+
+The complete architecture and UI are implemented, ready for integration with actual OCR libraries.
+
+---
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
