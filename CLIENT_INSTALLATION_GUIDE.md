@@ -1,11 +1,11 @@
 # IDSnap - Client Installation Guide
 
-## 📱 Quick Installation Guide
+## Quick Installation Guide
 
 ### What is IDSnap?
 IDSnap is a powerful Android application that uses advanced OCR (Optical Character Recognition) technology to scan and extract information from Kenyan ID cards. It automatically captures details like names, ID numbers, dates, and more.
 
-## 🔧 System Requirements
+## System Requirements
 
 - **Android Version**: 6.0 or higher
 - **RAM**: 2GB minimum (4GB recommended)
@@ -13,7 +13,7 @@ IDSnap is a powerful Android application that uses advanced OCR (Optical Charact
 - **Camera**: Required for scanning
 - **Internet**: Not required for basic scanning (offline capable)
 
-## 📥 Installation Steps
+## Installation Steps
 
 ### Step 1: Prepare Your Device
 
@@ -46,7 +46,7 @@ IDSnap is a powerful Android application that uses advanced OCR (Optical Charact
    - **Storage**: Required for saving scan history
    - Tap **"Allow"** for each permission request
 
-## 🚀 Getting Started
+## Getting Started
 
 ### First Scan
 
@@ -70,18 +70,18 @@ IDSnap is a powerful Android application that uses advanced OCR (Optical Charact
 - **Search**: Find specific scans by name, ID number, or other details
 - **Export**: Share or save scan results
 
-## 🔍 Features
+## Features
 
 ### What IDSnap Extracts:
-- ✅ **Full Name**
-- ✅ **ID Number**
-- ✅ **Serial Number**
-- ✅ **Date of Birth**
-- ✅ **Sex/Gender**
-- ✅ **District of Birth**
-- ✅ **Place of Issue**
-- ✅ **Date of Issue**
-- ✅ **Holder's Signature Status**
+- **Full Name**
+- **ID Number**
+- **Serial Number**
+- **Date of Birth**
+- **Sex/Gender**
+- **District of Birth**
+- **Place of Issue**
+- **Date of Issue**
+- **Holder's Signature Status**
 
 ### Key Benefits:
 - **Fast Processing**: Results in seconds
@@ -90,7 +90,7 @@ IDSnap is a powerful Android application that uses advanced OCR (Optical Charact
 - **Secure Storage**: All data stored locally on your device
 - **Easy Export**: Share results via email, messaging, etc.
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Installation Issues
 
@@ -126,7 +126,7 @@ IDSnap is a powerful Android application that uses advanced OCR (Optical Charact
 - Restart your device
 - Ensure you have enough free RAM (close other apps)
 
-## 📞 Support
+## Support
 
 If you encounter any issues:
 
@@ -137,14 +137,14 @@ If you encounter any issues:
    - Description of the problem
    - Screenshots if helpful
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
 - **Local Storage**: All scanned data stays on your device
 - **No Cloud Upload**: Information is not sent to external servers
 - **Secure**: Uses standard Android security practices
 - **Permissions**: Only requests necessary permissions (Camera, Storage)
 
-## 📋 Tips for Best Results
+## Tips for Best Results
 
 ### Scanning Tips:
 1. **Good Lighting**: Use natural light or bright indoor lighting
@@ -158,7 +158,7 @@ If you encounter any issues:
 - **Delete Old Scans**: Remove unnecessary entries to save space
 - **Export Important Data**: Share or backup critical information
 
-## ✅ Quick Start Checklist
+## Quick Start Checklist
 
 - [ ] Android 6.0+ device ready
 - [ ] APK file downloaded

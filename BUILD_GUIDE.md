@@ -1,6 +1,6 @@
 # IDSnap - APK Build & Deployment Guide
 
-## 📱 Building APK for Client Delivery
+## Building APK for Client Delivery
 
 ### Prerequisites
 
@@ -148,7 +148,7 @@ cd android
 # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-## 📦 Client Delivery Package
+## Client Delivery Package
 
 ### Create Delivery Folder Structure
 
@@ -171,7 +171,7 @@ cp ../android/app/build/outputs/apk/release/app-release.apk ./IDSnap_v1.0.apk
 4. **Technical_Specs.md** - Technical requirements and features
 5. **Release_Notes.md** - What's new in this version
 
-## 📋 Installation Guide for Client
+## Installation Guide for Client
 
 ### System Requirements
 - **Android Version**: 6.0 (API level 23) or higher
@@ -196,7 +196,7 @@ cp ../android/app/build/outputs/apk/release/app-release.apk ./IDSnap_v1.0.apk
    - Grant camera and storage permissions
    - The app is ready to use!
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Build Issues
 
@@ -228,7 +228,7 @@ cp ../android/app/build/outputs/apk/release/app-release.apk ./IDSnap_v1.0.apk
    - Go to App Settings > Permissions
    - Manually enable Camera and Storage permissions
 
-## 🚀 Advanced Options
+## Advanced Options
 
 ### Optimize APK Size
 
@@ -263,7 +263,7 @@ Set in `android/app/build.gradle`:
 def enableProguardInReleaseBuilds = true
 ```
 
-## 📊 Build Verification
+## Build Verification
 
 ### Test the APK
 
@@ -283,7 +283,7 @@ def enableProguardInReleaseBuilds = true
    - Memory usage
    - Battery consumption during scanning
 
-## 📝 Delivery Checklist
+## Delivery Checklist
 
 - [ ] APK builds successfully
 - [ ] App installs on test devices
@@ -294,14 +294,14 @@ def enableProguardInReleaseBuilds = true
 - [ ] Version numbers are updated
 - [ ] Release notes are prepared
 
-## 🔐 Security Notes
+## Security Notes
 
 - **Keep keystore file secure** - Never share or commit to version control
 - **Backup keystore** - Store in secure location with passwords
 - **Use different keystores** for debug and release builds
 - **Test on multiple devices** before client delivery
 
-## 📞 Support Information
+## Support Information
 
 For technical support or build issues:
 - Developer: [Your Contact Information]

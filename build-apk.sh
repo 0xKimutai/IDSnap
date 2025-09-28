@@ -3,8 +3,8 @@
 # IDSnap APK Build Script
 # This script automates the APK building process
 
-echo "🚀 IDSnap APK Build Script"
-echo "=========================="
+echo "IDSnap APK Build Script"
+echo "======================="
 
 # Colors for output
 RED='\033[0;31m'
@@ -133,18 +133,18 @@ print_success "Delivery package created: $DELIVERY_DIR/"
 
 # Step 6: Final summary
 echo ""
-echo "🎉 Build Complete!"
-echo "=================="
-echo "✅ APK built successfully"
-echo "✅ Delivery package created"
+echo "Build Complete!"
+echo "==============="
+echo "APK built successfully"
+echo "Delivery package created"
 echo ""
-echo "📦 Deliverables:"
+echo "Deliverables:"
 echo "   • IDSnap_v1.0.apk ($(du -h IDSnap_v1.0.apk | cut -f1))"
 echo "   • $DELIVERY_DIR/ (complete delivery package)"
 echo ""
-echo "📱 Next Steps:"
+echo "Next Steps:"
 echo "   1. Test the APK on Android devices"
 echo "   2. Share the delivery package with your client"
 echo "   3. Provide the installation guide to end users"
 echo ""
-print_success "Ready for client delivery! 🚀"
+print_success "Ready for client delivery!"

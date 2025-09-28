@@ -3,8 +3,8 @@
 # Quick Build Test Script
 # Tests if the build environment is ready
 
-echo "🔍 IDSnap Build Environment Test"
-echo "================================"
+echo "IDSnap Build Environment Test"
+echo "============================="
 
 # Colors
 GREEN='\033[0;32m'
@@ -14,30 +14,30 @@ NC='\033[0m'
 
 check_command() {
     if command -v $1 &> /dev/null; then
-        echo -e "✅ $1: ${GREEN}Found${NC}"
+        echo -e "[OK] $1: ${GREEN}Found${NC}"
         return 0
     else
-        echo -e "❌ $1: ${RED}Not found${NC}"
+        echo -e "[FAIL] $1: ${RED}Not found${NC}"
         return 1
     fi
 }
 
 check_file() {
     if [ -f "$1" ]; then
-        echo -e "✅ $1: ${GREEN}Found${NC}"
+        echo -e "[OK] $1: ${GREEN}Found${NC}"
         return 0
     else
-        echo -e "❌ $1: ${RED}Not found${NC}"
+        echo -e "[FAIL] $1: ${RED}Not found${NC}"
         return 1
     fi
 }
 
 check_dir() {
     if [ -d "$1" ]; then
-        echo -e "✅ $1/: ${GREEN}Found${NC}"
+        echo -e "[OK] $1/: ${GREEN}Found${NC}"
         return 0
     else
-        echo -e "❌ $1/: ${RED}Not found${NC}"
+        echo -e "[FAIL] $1/: ${RED}Not found${NC}"
         return 1
     fi
 }
@@ -58,21 +58,21 @@ check_dir "src"
 echo ""
 echo "Checking Android SDK..."
 if [ -n "$ANDROID_HOME" ]; then
-    echo -e "✅ ANDROID_HOME: ${GREEN}$ANDROID_HOME${NC}"
+    echo -e "[OK] ANDROID_HOME: ${GREEN}$ANDROID_HOME${NC}"
 else
-    echo -e "⚠️  ANDROID_HOME: ${YELLOW}Not set (may cause issues)${NC}"
+    echo -e "[WARN] ANDROID_HOME: ${YELLOW}Not set (may cause issues)${NC}"
 fi
 
 echo ""
 echo "Testing Gradle..."
 cd android
 if ./gradlew --version &> /dev/null; then
-    echo -e "✅ Gradle: ${GREEN}Working${NC}"
+    echo -e "[OK] Gradle: ${GREEN}Working${NC}"
 else
-    echo -e "❌ Gradle: ${RED}Issues detected${NC}"
+    echo -e "[FAIL] Gradle: ${RED}Issues detected${NC}"
 fi
 
 echo ""
-echo "🏁 Test complete!"
+echo "Test complete!"
 echo ""
 echo "To build APK, run: ./build-apk.sh"
