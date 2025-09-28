@@ -116,11 +116,13 @@ const CameraScreen = ({ navigation }) => {
 
 
   const parseOCRResult = (rawText) => {
-    console.log('Parsing OCR text:', rawText);
+    console.log('=== PARSING OCR TEXT ===');
+    console.log('Raw OCR text:', rawText);
     
     // Enhanced parsing logic for common ID card formats
     const lines = rawText.split('\n').map(line => line.trim()).filter(line => line);
     console.log('Lines to parse:', lines);
+    console.log('Total lines:', lines.length);
     
     let extractedData = {
       serialNumber: '',
@@ -151,34 +153,47 @@ const CameraScreen = ({ navigation }) => {
           upperLine.includes('NATIONAL') || 
           upperLine.includes('IDENTITY') || 
           upperLine.includes('CARD') ||
-          upperLine.includes('DOCUMENT') ||
           upperLine.length < 3) {
         console.log(`Skipping header line: ${line}`);
         return;
       }
 
-      // SERIAL NUMBER DETECTION - Kenyan IDs have format like KE-12345678-9
+      // SERIAL NUMBER DETECTION - Enhanced
       if (!extractedData.serialNumber) {
-        const serialPattern = /KE[-\s]*\d{8,10}[-\s]*\d{1,2}/gi;
-        const serialMatch = line.match(serialPattern);
-        if (serialMatch) {
-          extractedData.serialNumber = serialMatch[0].replace(/\s+/g, '-');
-          console.log(`Found Serial Number: ${extractedData.serialNumber}`);
+        // Look for patterns like "KE-12345678-9" or similar
+        if (upperLine.includes('SERIAL') || /KE-\d{8}-\d/.test(line)) {
+          const serialMatch = line.match(/KE-\d{8}-\d/);
+          if (serialMatch) {
+            extractedData.serialNumber = serialMatch[0];
+            console.log(`Found Serial Number: ${extractedData.serialNumber}`);
+          }
+        }
+        // Look for other serial number patterns
+        else if (upperLine.includes('SERIAL NUMBER') || upperLine.includes('SERIAL NO')) {
+          // Check next line for serial number
+          if (index < lines.length - 1) {
+            const nextLine = lines[index + 1].trim();
+            const serialMatch = nextLine.match(/[A-Z]{2}-\d{8}-\d/) || nextLine.match(/\d{8,12}/);
+            if (serialMatch) {
+              extractedData.serialNumber = serialMatch[0];
+              console.log(`Found Serial Number (next line): ${serialMatch[0]}`);
+            }
+          }
         }
         // Also try to extract from the demo data format
         else if (upperLine.includes('KE-') && /KE-\d{8}-\d/.test(line)) {
           const match = line.match(/KE-\d{8}-\d/);
           if (match) {
             extractedData.serialNumber = match[0];
-            console.log(`Found Serial Number (demo): ${extractedData.serialNumber}`);
+            console.log(`Found Serial Number (KE format): ${extractedData.serialNumber}`);
           }
         }
       }
 
-      // NAME DETECTION - Enhanced for real OCR text
+      // NAME DETECTION - Enhanced for real OCR text from Kenyan IDs
       if (!extractedData.name) {
-        // Skip header lines and look for name (usually appears after headers)
-        if (index >= 1 && index <= 6 && 
+        // Skip header lines and system text, look for actual person names
+        if (index >= 1 && index <= 10 && 
             !upperLine.includes('REPUBLIC') && 
             !upperLine.includes('NATIONAL') && 
             !upperLine.includes('IDENTITY') &&
@@ -190,9 +205,18 @@ const CameraScreen = ({ navigation }) => {
             !upperLine.includes('PLACE') &&
             !upperLine.includes('HOLDER') &&
             !upperLine.includes('SIGNATURE') &&
-            // Allow names with some OCR artifacts but mostly letters
-            /^[A-Za-z\s\.\-']{3,}$/.test(line.replace(/[0-9]/g, '').trim()) &&
-            line.trim().length > 3) {
+            !upperLine.includes('SERIAL') &&
+            !upperLine.includes('NUMBER') &&
+            !upperLine.includes('BIRTH') &&
+            !upperLine.includes('ISSUE') &&
+            !upperLine.includes('FULL NAMES') &&
+            !upperLine.includes('NAMES') &&
+            !upperLine.includes('NAME') &&
+            // Must be mostly letters (names), allow some common OCR artifacts
+            /^[A-Za-z\s\.\-']{5,}$/.test(line.replace(/[0-9]/g, '').trim()) &&
+            line.trim().length > 5 &&
+            // Additional check: should contain at least 2 words (first and last name)
+            line.trim().split(/\s+/).length >= 2) {
           
           // Clean up OCR artifacts from name
           const cleanedName = line.trim()
@@ -202,9 +226,36 @@ const CameraScreen = ({ navigation }) => {
             .trim()
             .toUpperCase();
             
-          if (cleanedName.length > 3) {
+          if (cleanedName.length > 5 && cleanedName.split(/\s+/).length >= 2) {
             extractedData.name = cleanedName;
             console.log(`Found Name: ${extractedData.name}`);
+          }
+        }
+        
+        // Alternative: Look for name after "FULL NAMES" or "NAME" label
+        if (!extractedData.name && (upperLine.includes('FULL NAMES') || upperLine.includes('NAME'))) {
+          // Check next line for the actual name
+          if (index < lines.length - 1) {
+            const nextLine = lines[index + 1].trim();
+            if (nextLine.length > 5 && 
+                /^[A-Za-z\s\.\-']{5,}$/.test(nextLine) &&
+                nextLine.split(/\s+/).length >= 2 &&
+                !nextLine.includes('ID') &&
+                !nextLine.includes('DATE') &&
+                !nextLine.includes('SEX')) {
+              
+              const cleanedName = nextLine.trim()
+                .replace(/[0-9]/g, '')
+                .replace(/[^\w\s\-'\.]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toUpperCase();
+                
+              if (cleanedName.length > 5) {
+                extractedData.name = cleanedName;
+                console.log(`Found Name (after label): ${cleanedName}`);
+              }
+            }
           }
         }
       }
@@ -230,31 +281,80 @@ const CameraScreen = ({ navigation }) => {
         }
       }
 
-      // DATE DETECTION - Enhanced patterns
+      // DATE DETECTION - Enhanced patterns for better OCR recognition
       const datePatterns = [
         /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g,  // DD/MM/YYYY
         /\b\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\b/g,  // YYYY/MM/DD
         /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}\b/g,      // DD Month YYYY
+        /\b\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{2,4}\b/g,  // DD / MM / YYYY (with spaces)
+        /\b\d{1,2}\s*\-\s*\d{1,2}\s*\-\s*\d{2,4}\b/g,  // DD - MM - YYYY (with spaces)
       ];
 
-      // Specific date field detection for Kenyan ID
-      if (!extractedData.dateOfBirth && upperLine.includes('DATE OF BIRTH')) {
-        const dobMatch = line.split(':')[1]?.trim();
-        if (dobMatch) {
-          extractedData.dateOfBirth = dobMatch;
-          console.log(`Found Date of Birth: ${dobMatch}`);
+      // Enhanced DATE OF BIRTH detection
+      if (!extractedData.dateOfBirth) {
+        // Method 1: Look for "DATE OF BIRTH" label
+        if (upperLine.includes('DATE OF BIRTH') || upperLine.includes('DOB')) {
+          const dobMatch = line.split(/[:]/)[1]?.trim();
+          if (dobMatch && /\d/.test(dobMatch)) {
+            extractedData.dateOfBirth = dobMatch;
+            console.log(`Found Date of Birth: ${dobMatch}`);
+          }
+          // Check next line for date
+          else if (index < lines.length - 1) {
+            const nextLine = lines[index + 1].trim();
+            const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.\s]*\d{1,2}[\/\-\.\s]*\d{2,4})/);
+            if (dateMatch) {
+              extractedData.dateOfBirth = dateMatch[1].replace(/\s+/g, '/');
+              console.log(`Found Date of Birth (next line): ${extractedData.dateOfBirth}`);
+            }
+          }
+        }
+        
+        // Method 2: Look for any date pattern in lines containing "BIRTH"
+        if (!extractedData.dateOfBirth && upperLine.includes('BIRTH')) {
+          datePatterns.forEach(pattern => {
+            const matches = line.match(pattern);
+            if (matches && matches[0]) {
+              extractedData.dateOfBirth = matches[0];
+              console.log(`Found Date of Birth (pattern in birth line): ${matches[0]}`);
+            }
+          });
         }
       }
       
-      if (!extractedData.dateOfIssue && upperLine.includes('DATE OF ISSUE')) {
-        const issueMatch = line.split(':')[1]?.trim();
-        if (issueMatch) {
-          extractedData.dateOfIssue = issueMatch;
-          console.log(`Found Date of Issue: ${issueMatch}`);
+      // Enhanced DATE OF ISSUE detection
+      if (!extractedData.dateOfIssue) {
+        // Method 1: Look for "DATE OF ISSUE" label
+        if (upperLine.includes('DATE OF ISSUE') || upperLine.includes('ISSUE')) {
+          const issueMatch = line.split(/[:]/)[1]?.trim();
+          if (issueMatch && /\d/.test(issueMatch)) {
+            extractedData.dateOfIssue = issueMatch;
+            console.log(`Found Date of Issue: ${issueMatch}`);
+          }
+          // Check next line for date
+          else if (index < lines.length - 1) {
+            const nextLine = lines[index + 1].trim();
+            const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.\s]*\d{1,2}[\/\-\.\s]*\d{2,4})/);
+            if (dateMatch) {
+              extractedData.dateOfIssue = dateMatch[1].replace(/\s+/g, '/');
+              console.log(`Found Date of Issue (next line): ${extractedData.dateOfIssue}`);
+            }
+          }
+        }
+        
+        // Method 2: Look for any date pattern in lines containing "ISSUE"
+        if (!extractedData.dateOfIssue && upperLine.includes('ISSUE')) {
+          datePatterns.forEach(pattern => {
+            const matches = line.match(pattern);
+            if (matches && matches[0]) {
+              extractedData.dateOfIssue = matches[0];
+              console.log(`Found Date of Issue (pattern in issue line): ${matches[0]}`);
+            }
+          });
         }
       }
       
-      // Fallback date patterns
+      // Fallback date patterns - Enhanced with aggressive scanning
       datePatterns.forEach(pattern => {
         const matches = line.match(pattern);
         if (matches) {
@@ -267,9 +367,43 @@ const CameraScreen = ({ navigation }) => {
               extractedData.dateOfIssue = date;
               console.log(`Found Date of Issue (pattern): ${date}`);
             }
+            // If no context, assign to missing field based on position and date logic
+            else if (!extractedData.dateOfBirth && index < lines.length / 2) {
+              // Earlier in document, likely birth date
+              extractedData.dateOfBirth = date;
+              console.log(`Found Date of Birth (position-based): ${date}`);
+            } else if (!extractedData.dateOfIssue && index >= lines.length / 2) {
+              // Later in document, likely issue date
+              extractedData.dateOfIssue = date;
+              console.log(`Found Date of Issue (position-based): ${date}`);
+            }
+            // Last resort: assign any date to missing field
+            else if (!extractedData.dateOfBirth) {
+              extractedData.dateOfBirth = date;
+              console.log(`Found Date of Birth (last resort): ${date}`);
+            } else if (!extractedData.dateOfIssue) {
+              extractedData.dateOfIssue = date;
+              console.log(`Found Date of Issue (last resort): ${date}`);
+            }
           });
         }
       });
+
+      // Additional aggressive date scanning - scan entire line for any date-like patterns
+      if ((!extractedData.dateOfBirth || !extractedData.dateOfIssue) && /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(line)) {
+        const allDates = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/g);
+        if (allDates) {
+          allDates.forEach(date => {
+            if (!extractedData.dateOfBirth) {
+              extractedData.dateOfBirth = date;
+              console.log(`Found Date of Birth (aggressive scan): ${date}`);
+            } else if (!extractedData.dateOfIssue) {
+              extractedData.dateOfIssue = date;
+              console.log(`Found Date of Issue (aggressive scan): ${date}`);
+            }
+          });
+        }
+      }
 
       // ADDRESS DETECTION
       if (!extractedData.address) {
@@ -315,21 +449,37 @@ const CameraScreen = ({ navigation }) => {
         }
       }
 
-      // DISTRICT OF BIRTH DETECTION
-      if (!extractedData.districtOfBirth && upperLine.includes('DISTRICT OF BIRTH')) {
+      // DISTRICT OF BIRTH DETECTION - Enhanced
+      if (!extractedData.districtOfBirth && (upperLine.includes('DISTRICT OF BIRTH') || upperLine.includes('DISTRICT'))) {
         const districtMatch = line.split(':')[1]?.trim();
-        if (districtMatch) {
-          extractedData.districtOfBirth = districtMatch;
+        if (districtMatch && districtMatch.length > 2) {
+          extractedData.districtOfBirth = districtMatch.toUpperCase();
           console.log(`Found District of Birth: ${districtMatch}`);
+        }
+        // Check next line if district name is on separate line
+        else if (index < lines.length - 1) {
+          const nextLine = lines[index + 1].trim();
+          if (nextLine.length > 2 && /^[A-Za-z\s]+$/.test(nextLine) && !nextLine.includes('PLACE') && !nextLine.includes('DATE')) {
+            extractedData.districtOfBirth = nextLine.toUpperCase();
+            console.log(`Found District of Birth (next line): ${nextLine}`);
+          }
         }
       }
 
-      // PLACE OF ISSUE DETECTION
-      if (!extractedData.placeOfIssue && upperLine.includes('PLACE OF ISSUE')) {
+      // PLACE OF ISSUE DETECTION - Enhanced
+      if (!extractedData.placeOfIssue && (upperLine.includes('PLACE OF ISSUE') || upperLine.includes('PLACE'))) {
         const placeMatch = line.split(':')[1]?.trim();
-        if (placeMatch) {
-          extractedData.placeOfIssue = placeMatch;
+        if (placeMatch && placeMatch.length > 2) {
+          extractedData.placeOfIssue = placeMatch.toUpperCase();
           console.log(`Found Place of Issue: ${placeMatch}`);
+        }
+        // Check next line if place name is on separate line
+        else if (index < lines.length - 1) {
+          const nextLine = lines[index + 1].trim();
+          if (nextLine.length > 2 && /^[A-Za-z\s]+$/.test(nextLine) && !nextLine.includes('DATE') && !nextLine.includes('HOLDER')) {
+            extractedData.placeOfIssue = nextLine.toUpperCase();
+            console.log(`Found Place of Issue (next line): ${nextLine}`);
+          }
         }
       }
 
@@ -359,7 +509,10 @@ const CameraScreen = ({ navigation }) => {
     const fieldsFound = Object.values(extractedData).filter(v => v && v !== '').length - 1; // Exclude confidence field
     extractedData.confidence = Math.min(0.95, fieldsFound / 8); // Max 95% confidence
 
+    console.log('=== PARSING COMPLETE ===');
+    console.log('Fields found:', fieldsFound, 'out of 8');
     console.log('Final extracted data:', extractedData);
+    console.log('========================');
     return extractedData;
   };
 
