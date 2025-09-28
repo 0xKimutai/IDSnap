@@ -119,6 +119,17 @@ const CameraScreen = ({ navigation }) => {
     console.log('=== PARSING OCR TEXT ===');
     console.log('Raw OCR text:', rawText);
     
+    // Helper function to clean date formats
+    const cleanDateFormat = (dateStr) => {
+      if (!dateStr) return dateStr;
+      return dateStr
+        .replace(/\./g, '/') // Replace dots with slashes
+        .replace(/\-/g, '/') // Replace dashes with slashes
+        .replace(/\s+/g, '/') // Replace spaces with slashes
+        .replace(/\/+/g, '/') // Remove multiple consecutive slashes
+        .replace(/^\/|\/$/g, ''); // Remove leading/trailing slashes
+    };
+    
     // Enhanced parsing logic for common ID card formats
     const lines = rawText.split('\n').map(line => line.trim()).filter(line => line);
     console.log('Lines to parse:', lines);
@@ -158,34 +169,74 @@ const CameraScreen = ({ navigation }) => {
         return;
       }
 
-      // SERIAL NUMBER DETECTION - Enhanced
+      // SERIAL NUMBER DETECTION - Enhanced for Kenyan ID format with debugging
       if (!extractedData.serialNumber) {
-        // Look for patterns like "KE-12345678-9" or similar
-        if (upperLine.includes('SERIAL') || /KE-\d{8}-\d/.test(line)) {
-          const serialMatch = line.match(/KE-\d{8}-\d/);
-          if (serialMatch) {
-            extractedData.serialNumber = serialMatch[0];
-            console.log(`Found Serial Number: ${extractedData.serialNumber}`);
+        console.log(`Checking line for serial: "${line}"`);
+        console.log(`Upper line: "${upperLine}"`);
+        console.log(`Contains SERIAL NUMBER: ${upperLine.includes('SERIAL NUMBER')}`);
+        console.log(`Contains SERIAL: ${upperLine.includes('SERIAL')}`);
+        
+        // Method 1: Look for "SERIAL NUMBER:" with colon
+        if (upperLine.includes('SERIAL NUMBER') && line.includes(':')) {
+          console.log('Method 1: Found SERIAL NUMBER with colon');
+          const serialMatch = line.split(':')[1]?.trim();
+          console.log(`Serial match after colon: "${serialMatch}"`);
+          if (serialMatch && /^\d{8,12}$/.test(serialMatch)) {
+            extractedData.serialNumber = serialMatch;
+            console.log(`✅ Found Serial Number: ${extractedData.serialNumber}`);
+          } else {
+            console.log(`❌ Serial match failed validation: ${serialMatch}`);
           }
         }
-        // Look for other serial number patterns
+        // Method 2: Look for "SERIAL NUMBER" label and check next line
         else if (upperLine.includes('SERIAL NUMBER') || upperLine.includes('SERIAL NO')) {
+          console.log('Method 2: Found SERIAL NUMBER label');
+          // Check same line first for number after the label
+          const sameLineMatch = line.match(/SERIAL\s+NUMBER[:\s]*(\d{8,12})/i);
+          if (sameLineMatch) {
+            extractedData.serialNumber = sameLineMatch[1];
+            console.log(`✅ Found Serial Number (same line): ${extractedData.serialNumber}`);
+          }
           // Check next line for serial number
-          if (index < lines.length - 1) {
+          else if (index < lines.length - 1) {
             const nextLine = lines[index + 1].trim();
-            const serialMatch = nextLine.match(/[A-Z]{2}-\d{8}-\d/) || nextLine.match(/\d{8,12}/);
+            console.log(`Checking next line for serial: "${nextLine}"`);
+            const serialMatch = nextLine.match(/^\d{8,12}$/);
             if (serialMatch) {
               extractedData.serialNumber = serialMatch[0];
-              console.log(`Found Serial Number (next line): ${serialMatch[0]}`);
+              console.log(`✅ Found Serial Number (next line): ${serialMatch[0]}`);
+            } else {
+              console.log(`❌ Next line doesn't match serial pattern: ${nextLine}`);
             }
           }
         }
-        // Also try to extract from the demo data format
-        else if (upperLine.includes('KE-') && /KE-\d{8}-\d/.test(line)) {
-          const match = line.match(/KE-\d{8}-\d/);
-          if (match) {
-            extractedData.serialNumber = match[0];
-            console.log(`Found Serial Number (KE format): ${extractedData.serialNumber}`);
+        // Method 3: Look for KE- format (alternative format)
+        else if (upperLine.includes('SERIAL') || /KE-\d{8}-\d/.test(line)) {
+          console.log('Method 3: Found SERIAL or KE- format');
+          const serialMatch = line.match(/KE-\d{8}-\d/);
+          if (serialMatch) {
+            extractedData.serialNumber = serialMatch[0];
+            console.log(`✅ Found Serial Number (KE format): ${extractedData.serialNumber}`);
+          }
+        }
+        // Method 4: Look for any 8-12 digit number in lines containing "SERIAL"
+        else if (upperLine.includes('SERIAL')) {
+          console.log('Method 4: Found SERIAL, looking for number pattern');
+          const numberMatch = line.match(/\d{8,12}/);
+          console.log(`Number match: ${numberMatch}`);
+          if (numberMatch) {
+            extractedData.serialNumber = numberMatch[0];
+            console.log(`✅ Found Serial Number (pattern in serial line): ${extractedData.serialNumber}`);
+          }
+        }
+        
+        // Method 5: Aggressive search - look for any 9-digit number that could be serial
+        if (!extractedData.serialNumber && /\d{9}/.test(line)) {
+          console.log('Method 5: Aggressive search for 9-digit number');
+          const nineDigitMatch = line.match(/\d{9}/);
+          if (nineDigitMatch && !upperLine.includes('ID NO') && !upperLine.includes('DATE')) {
+            extractedData.serialNumber = nineDigitMatch[0];
+            console.log(`✅ Found Serial Number (9-digit aggressive): ${extractedData.serialNumber}`);
           }
         }
       }
@@ -304,7 +355,12 @@ const CameraScreen = ({ navigation }) => {
             const nextLine = lines[index + 1].trim();
             const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.\s]*\d{1,2}[\/\-\.\s]*\d{2,4})/);
             if (dateMatch) {
-              extractedData.dateOfBirth = dateMatch[1].replace(/\s+/g, '/');
+              // Clean up the date format - remove extra dots and normalize separators
+              extractedData.dateOfBirth = dateMatch[1]
+                .replace(/\./g, '/') // Replace dots with slashes
+                .replace(/\-/g, '/') // Replace dashes with slashes
+                .replace(/\s+/g, '/') // Replace spaces with slashes
+                .replace(/\/+/g, '/'); // Remove multiple consecutive slashes
               console.log(`Found Date of Birth (next line): ${extractedData.dateOfBirth}`);
             }
           }
@@ -315,8 +371,8 @@ const CameraScreen = ({ navigation }) => {
           datePatterns.forEach(pattern => {
             const matches = line.match(pattern);
             if (matches && matches[0]) {
-              extractedData.dateOfBirth = matches[0];
-              console.log(`Found Date of Birth (pattern in birth line): ${matches[0]}`);
+              extractedData.dateOfBirth = cleanDateFormat(matches[0]);
+              console.log(`Found Date of Birth (pattern in birth line): ${extractedData.dateOfBirth}`);
             }
           });
         }
@@ -336,7 +392,12 @@ const CameraScreen = ({ navigation }) => {
             const nextLine = lines[index + 1].trim();
             const dateMatch = nextLine.match(/(\d{1,2}[\/\-\.\s]*\d{1,2}[\/\-\.\s]*\d{2,4})/);
             if (dateMatch) {
-              extractedData.dateOfIssue = dateMatch[1].replace(/\s+/g, '/');
+              // Clean up the date format - remove extra dots and normalize separators
+              extractedData.dateOfIssue = dateMatch[1]
+                .replace(/\./g, '/') // Replace dots with slashes
+                .replace(/\-/g, '/') // Replace dashes with slashes
+                .replace(/\s+/g, '/') // Replace spaces with slashes
+                .replace(/\/+/g, '/'); // Remove multiple consecutive slashes
               console.log(`Found Date of Issue (next line): ${extractedData.dateOfIssue}`);
             }
           }
@@ -347,8 +408,8 @@ const CameraScreen = ({ navigation }) => {
           datePatterns.forEach(pattern => {
             const matches = line.match(pattern);
             if (matches && matches[0]) {
-              extractedData.dateOfIssue = matches[0];
-              console.log(`Found Date of Issue (pattern in issue line): ${matches[0]}`);
+              extractedData.dateOfIssue = cleanDateFormat(matches[0]);
+              console.log(`Found Date of Issue (pattern in issue line): ${extractedData.dateOfIssue}`);
             }
           });
         }
@@ -361,29 +422,29 @@ const CameraScreen = ({ navigation }) => {
           matches.forEach(date => {
             // Context-based date assignment
             if ((upperLine.includes('DOB') || upperLine.includes('BIRTH') || upperLine.includes('BORN')) && !extractedData.dateOfBirth) {
-              extractedData.dateOfBirth = date;
-              console.log(`Found Date of Birth (pattern): ${date}`);
+              extractedData.dateOfBirth = cleanDateFormat(date);
+              console.log(`Found Date of Birth (pattern): ${extractedData.dateOfBirth}`);
             } else if ((upperLine.includes('ISSUE') || upperLine.includes('VALID FROM')) && !extractedData.dateOfIssue) {
-              extractedData.dateOfIssue = date;
-              console.log(`Found Date of Issue (pattern): ${date}`);
+              extractedData.dateOfIssue = cleanDateFormat(date);
+              console.log(`Found Date of Issue (pattern): ${extractedData.dateOfIssue}`);
             }
             // If no context, assign to missing field based on position and date logic
             else if (!extractedData.dateOfBirth && index < lines.length / 2) {
               // Earlier in document, likely birth date
-              extractedData.dateOfBirth = date;
-              console.log(`Found Date of Birth (position-based): ${date}`);
+              extractedData.dateOfBirth = cleanDateFormat(date);
+              console.log(`Found Date of Birth (position-based): ${extractedData.dateOfBirth}`);
             } else if (!extractedData.dateOfIssue && index >= lines.length / 2) {
               // Later in document, likely issue date
-              extractedData.dateOfIssue = date;
-              console.log(`Found Date of Issue (position-based): ${date}`);
+              extractedData.dateOfIssue = cleanDateFormat(date);
+              console.log(`Found Date of Issue (position-based): ${extractedData.dateOfIssue}`);
             }
             // Last resort: assign any date to missing field
             else if (!extractedData.dateOfBirth) {
-              extractedData.dateOfBirth = date;
-              console.log(`Found Date of Birth (last resort): ${date}`);
+              extractedData.dateOfBirth = cleanDateFormat(date);
+              console.log(`Found Date of Birth (last resort): ${extractedData.dateOfBirth}`);
             } else if (!extractedData.dateOfIssue) {
-              extractedData.dateOfIssue = date;
-              console.log(`Found Date of Issue (last resort): ${date}`);
+              extractedData.dateOfIssue = cleanDateFormat(date);
+              console.log(`Found Date of Issue (last resort): ${extractedData.dateOfIssue}`);
             }
           });
         }
@@ -395,11 +456,11 @@ const CameraScreen = ({ navigation }) => {
         if (allDates) {
           allDates.forEach(date => {
             if (!extractedData.dateOfBirth) {
-              extractedData.dateOfBirth = date;
-              console.log(`Found Date of Birth (aggressive scan): ${date}`);
+              extractedData.dateOfBirth = cleanDateFormat(date);
+              console.log(`Found Date of Birth (aggressive scan): ${extractedData.dateOfBirth}`);
             } else if (!extractedData.dateOfIssue) {
-              extractedData.dateOfIssue = date;
-              console.log(`Found Date of Issue (aggressive scan): ${date}`);
+              extractedData.dateOfIssue = cleanDateFormat(date);
+              console.log(`Found Date of Issue (aggressive scan): ${extractedData.dateOfIssue}`);
             }
           });
         }
