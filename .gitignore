@@ -85,6 +85,12 @@ IDSnap_Delivery_*/
 delivery/
 dist/
 
+# Client Documentation - Generated for delivery packages only
+BUILD_GUIDE.md
+CLIENT_INSTALLATION_GUIDE.md
+*_GUIDE.md
+README.txt
+
 # Release builds
 android/app/build/outputs/
 ios/build/
