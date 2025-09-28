@@ -87,7 +87,11 @@ const HistoryScreen = ({ navigation }) => {
 
   const handleItemPress = (item) => {
     navigation.navigate('Result', {
-      scanData: item.extractedData,
+      scanData: {
+        data: item.extractedData,
+        confidence: item.extractedData?.confidence || 0.85,
+        timestamp: item.timestamp
+      },
       imageUri: item.imageUri,
       rawText: item.rawText
     });
@@ -141,14 +145,37 @@ const HistoryScreen = ({ navigation }) => {
   };
 
   const formatDate = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
 
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
+      if (diffMinutes < 1) return 'Just now';
+      if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+      if (diffHours < 24) return `${diffHours} hours ago`;
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays <= 7) return `${diffDays} days ago`;
+      
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Unknown date';
+    }
   };
 
   const styles = createStyles(colors);
@@ -215,7 +242,7 @@ const HistoryScreen = ({ navigation }) => {
                     {item.extractedData?.name || 'Unknown Name'}
                   </Text>
                   <Text style={styles.itemDate}>
-                    {formatDate(new Date(item.timestamp))}
+                    {formatDate(item.timestamp)}
                   </Text>
                 </View>
                 
