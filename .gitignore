@@ -73,3 +73,28 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# APK and Build Artifacts - DO NOT COMMIT
+*.apk
+*.aab
+*.ipa
+
+# Delivery Packages - DO NOT COMMIT
+IDSnap_Delivery_*/
+*_Delivery_*/
+delivery/
+dist/
+
+# Release builds
+android/app/build/outputs/
+ios/build/
+
+# Keystore files (security)
+*.keystore
+*.jks
+!debug.keystore
+
+# Environment and config files with sensitive data
+.env.local
+.env.production
+google-services.json.backup
