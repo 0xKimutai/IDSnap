@@ -19,7 +19,25 @@ import {
 } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TextRecognition } from '@react-native-ml-kit/text-recognition';
+
+// Try different import methods for new architecture compatibility
+let TextRecognition;
+try {
+  // Method 1: Named import
+  const mlkit = require('@react-native-ml-kit/text-recognition');
+  TextRecognition = mlkit.TextRecognition || mlkit.default || mlkit;
+  console.log('ML Kit imported via require:', !!TextRecognition);
+} catch (error) {
+  console.log('Failed to import ML Kit via require:', error.message);
+  try {
+    // Method 2: ES6 import
+    const { TextRecognition: MLKitTextRecognition } = require('@react-native-ml-kit/text-recognition');
+    TextRecognition = MLKitTextRecognition;
+    console.log('ML Kit imported via named import:', !!TextRecognition);
+  } catch (error2) {
+    console.log('Failed to import ML Kit via named import:', error2.message);
+  }
+}
 
 const { width, height } = Dimensions.get('window');
 
@@ -96,6 +114,7 @@ const CameraScreen = ({ navigation }) => {
   };
 
 
+
   const parseOCRResult = (rawText) => {
     console.log('Parsing OCR text:', rawText);
     
@@ -156,54 +175,59 @@ const CameraScreen = ({ navigation }) => {
         }
       }
 
-      // NAME DETECTION - For Kenyan ID format
+      // NAME DETECTION - Enhanced for real OCR text
       if (!extractedData.name) {
         // Skip header lines and look for name (usually appears after headers)
-        if (index >= 1 && index <= 4 && 
+        if (index >= 1 && index <= 6 && 
             !upperLine.includes('REPUBLIC') && 
             !upperLine.includes('NATIONAL') && 
             !upperLine.includes('IDENTITY') &&
+            !upperLine.includes('CARD') &&
             !upperLine.includes('ID NO') &&
             !upperLine.includes('DATE') &&
             !upperLine.includes('SEX') &&
             !upperLine.includes('DISTRICT') &&
             !upperLine.includes('PLACE') &&
             !upperLine.includes('HOLDER') &&
-            /^[A-Za-z\s]+$/.test(line) &&
-            line.length > 5) {
-          extractedData.name = line.trim();
-          console.log(`Found Name: ${extractedData.name}`);
+            !upperLine.includes('SIGNATURE') &&
+            // Allow names with some OCR artifacts but mostly letters
+            /^[A-Za-z\s\.\-']{3,}$/.test(line.replace(/[0-9]/g, '').trim()) &&
+            line.trim().length > 3) {
+          
+          // Clean up OCR artifacts from name
+          const cleanedName = line.trim()
+            .replace(/[0-9]/g, '') // Remove numbers
+            .replace(/[^\w\s\-'\.]/g, ' ') // Remove special chars except common name chars
+            .replace(/\s+/g, ' ') // Normalize spaces
+            .trim()
+            .toUpperCase();
+            
+          if (cleanedName.length > 3) {
+            extractedData.name = cleanedName;
+            console.log(`Found Name: ${extractedData.name}`);
+          }
         }
       }
 
-      // ID NUMBER DETECTION - Enhanced for Kenyan format
-      if (!extractedData.idNumber && upperLine.includes('ID NO')) {
-        const idMatch = line.split(':')[1]?.trim();
-        if (idMatch) {
-          extractedData.idNumber = idMatch;
-          console.log(`Found ID Number: ${idMatch}`);
-        }
-      }
-      
-      // Fallback ID patterns
+      // ID NUMBER DETECTION - Enhanced for real OCR with variations
       if (!extractedData.idNumber) {
-        const idPatterns = [
-          /\b\d{8,15}\b/g,              // 8-15 digit numbers
-          /[A-Z]\d{7,12}/g,             // Letter followed by 7-12 digits
-          /\d{2,4}[-\s]\d{3,6}[-\s]\d{3,6}/g, // Segmented numbers
-        ];
-        
-        idPatterns.forEach(pattern => {
-          const matches = line.match(pattern);
-          if (matches && !extractedData.idNumber) {
-            // Get the longest match (likely the ID number)
-            const longestMatch = matches.sort((a, b) => b.length - a.length)[0];
-            if (longestMatch.length >= 8) {
-              extractedData.idNumber = longestMatch.replace(/[^\w]/g, '');
-              console.log(`Found ID Number (pattern): ${extractedData.idNumber}`);
-            }
+        // Look for "ID NO:" or similar patterns
+        if (upperLine.includes('ID NO') || upperLine.includes('ID:') || upperLine.includes('IDNO')) {
+          const idMatch = line.split(/[:]/)[1]?.trim().replace(/[^\d]/g, '');
+          if (idMatch && idMatch.length >= 7) {
+            extractedData.idNumber = idMatch;
+            console.log(`Found ID Number: ${idMatch}`);
           }
-        });
+        }
+        
+        // Fallback: Look for 8-digit numbers (common Kenyan ID format)
+        if (!extractedData.idNumber) {
+          const digitMatch = line.match(/\b\d{8}\b/);
+          if (digitMatch && !upperLine.includes('DATE') && !upperLine.includes('BIRTH')) {
+            extractedData.idNumber = digitMatch[0];
+            console.log(`Found ID Number (8-digit pattern): ${extractedData.idNumber}`);
+          }
+        }
       }
 
       // DATE DETECTION - Enhanced patterns
@@ -398,25 +422,43 @@ const CameraScreen = ({ navigation }) => {
         });
       }, 300);
 
-      console.log('Starting ML Kit text recognition for URI:', uri);
+      console.log('Starting ML Kit OCR processing for URI:', uri);
       
-      // Check if TextRecognition is available
+      // ONLY ML Kit - NO FALLBACKS, NO MOCK DATA
+      console.log('Using ML Kit Text Recognition...');
+      console.log('TextRecognition object:', TextRecognition);
+      console.log('TextRecognition.recognize function:', typeof TextRecognition.recognize);
+      
+      // Check if ML Kit is available
       if (!TextRecognition || typeof TextRecognition.recognize !== 'function') {
-        throw new Error('ML Kit text recognition module not available. Please ensure the module is properly linked.');
+        clearInterval(progressInterval);
+        throw new Error(`ML Kit Text Recognition is not available. TextRecognition: ${!!TextRecognition}, recognize function: ${typeof TextRecognition?.recognize}. Please check the installation and linking.`);
       }
       
-      // Use ML Kit for real OCR
+      // Process with ML Kit
+      console.log('Calling TextRecognition.recognize with URI:', uri);
       const result = await TextRecognition.recognize(uri);
-      console.log('Raw OCR result from ML Kit:', result);
       
-      if (!result) {
-        throw new Error('No text was recognized in the image');
+      clearInterval(progressInterval);
+      setOcrProgress(100);
+      
+      console.log('ML Kit Raw Result:', result);
+      
+      // Validate result
+      if (!result || (typeof result === 'string' && result.trim().length === 0)) {
+        throw new Error('ML Kit could not extract any text from this image. Please try a clearer image.');
       }
       
-      console.log('OCR Raw Result:', result);
+      // ML Kit returns text directly
+      let extractedText = result;
+      if (typeof result === 'object' && result.text) {
+        extractedText = result.text;
+      }
+      
+      console.log('Final extracted text:', extractedText);
       
       // Parse the OCR result
-      const extractedData = parseOCRResult(result);
+      const extractedData = parseOCRResult(extractedText);
       console.log('Parsed Data:', extractedData);
       
       clearInterval(progressInterval);
