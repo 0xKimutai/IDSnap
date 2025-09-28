@@ -45,7 +45,6 @@ const CameraScreen = ({ navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
-  const [flashEnabled, setFlashEnabled] = useState(false);
   const [scanAnimation] = useState(() => new Animated.Value(0));
   const [cameraPermission, setCameraPermission] = useState(false);
 
@@ -169,74 +168,57 @@ const CameraScreen = ({ navigation }) => {
         return;
       }
 
-      // SERIAL NUMBER DETECTION - Enhanced for Kenyan ID format with debugging
+      // SERIAL NUMBER DETECTION - Enhanced for Kenyan ID format
       if (!extractedData.serialNumber) {
-        console.log(`Checking line for serial: "${line}"`);
-        console.log(`Upper line: "${upperLine}"`);
-        console.log(`Contains SERIAL NUMBER: ${upperLine.includes('SERIAL NUMBER')}`);
-        console.log(`Contains SERIAL: ${upperLine.includes('SERIAL')}`);
-        
         // Method 1: Look for "SERIAL NUMBER:" with colon
         if (upperLine.includes('SERIAL NUMBER') && line.includes(':')) {
-          console.log('Method 1: Found SERIAL NUMBER with colon');
           const serialMatch = line.split(':')[1]?.trim();
-          console.log(`Serial match after colon: "${serialMatch}"`);
           if (serialMatch && /^\d{8,12}$/.test(serialMatch)) {
             extractedData.serialNumber = serialMatch;
-            console.log(`✅ Found Serial Number: ${extractedData.serialNumber}`);
-          } else {
-            console.log(`❌ Serial match failed validation: ${serialMatch}`);
+            console.log(`Found Serial Number: ${extractedData.serialNumber}`);
           }
         }
         // Method 2: Look for "SERIAL NUMBER" label and check next line
         else if (upperLine.includes('SERIAL NUMBER') || upperLine.includes('SERIAL NO')) {
-          console.log('Method 2: Found SERIAL NUMBER label');
           // Check same line first for number after the label
           const sameLineMatch = line.match(/SERIAL\s+NUMBER[:\s]*(\d{8,12})/i);
           if (sameLineMatch) {
             extractedData.serialNumber = sameLineMatch[1];
-            console.log(`✅ Found Serial Number (same line): ${extractedData.serialNumber}`);
+            console.log(`Found Serial Number (same line): ${extractedData.serialNumber}`);
           }
           // Check next line for serial number
           else if (index < lines.length - 1) {
             const nextLine = lines[index + 1].trim();
-            console.log(`Checking next line for serial: "${nextLine}"`);
             const serialMatch = nextLine.match(/^\d{8,12}$/);
             if (serialMatch) {
               extractedData.serialNumber = serialMatch[0];
-              console.log(`✅ Found Serial Number (next line): ${serialMatch[0]}`);
-            } else {
-              console.log(`❌ Next line doesn't match serial pattern: ${nextLine}`);
+              console.log(`Found Serial Number (next line): ${serialMatch[0]}`);
             }
           }
         }
         // Method 3: Look for KE- format (alternative format)
         else if (upperLine.includes('SERIAL') || /KE-\d{8}-\d/.test(line)) {
-          console.log('Method 3: Found SERIAL or KE- format');
           const serialMatch = line.match(/KE-\d{8}-\d/);
           if (serialMatch) {
             extractedData.serialNumber = serialMatch[0];
-            console.log(`✅ Found Serial Number (KE format): ${extractedData.serialNumber}`);
+            console.log(`Found Serial Number (KE format): ${extractedData.serialNumber}`);
           }
         }
         // Method 4: Look for any 8-12 digit number in lines containing "SERIAL"
         else if (upperLine.includes('SERIAL')) {
-          console.log('Method 4: Found SERIAL, looking for number pattern');
           const numberMatch = line.match(/\d{8,12}/);
-          console.log(`Number match: ${numberMatch}`);
           if (numberMatch) {
             extractedData.serialNumber = numberMatch[0];
-            console.log(`✅ Found Serial Number (pattern in serial line): ${extractedData.serialNumber}`);
+            console.log(`Found Serial Number (pattern in serial line): ${extractedData.serialNumber}`);
           }
         }
         
         // Method 5: Aggressive search - look for any 9-digit number that could be serial
         if (!extractedData.serialNumber && /\d{9}/.test(line)) {
-          console.log('Method 5: Aggressive search for 9-digit number');
           const nineDigitMatch = line.match(/\d{9}/);
           if (nineDigitMatch && !upperLine.includes('ID NO') && !upperLine.includes('DATE')) {
             extractedData.serialNumber = nineDigitMatch[0];
-            console.log(`✅ Found Serial Number (9-digit aggressive): ${extractedData.serialNumber}`);
+            console.log(`Found Serial Number (9-digit aggressive): ${extractedData.serialNumber}`);
           }
         }
       }
@@ -865,12 +847,6 @@ const CameraScreen = ({ navigation }) => {
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan ID Card</Text>
-        <TouchableOpacity 
-          style={styles.flashButton}
-          onPress={() => setFlashEnabled(!flashEnabled)}
-        >
-          <Text style={styles.flashText}>⚡</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Camera/Preview Area */}
@@ -976,13 +952,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#ffffff',
     marginRight: 60,
-  },
-  flashButton: {
-    padding: 8,
-  },
-  flashText: {
-    fontSize: 20,
-    color: '#ffffff',
   },
   
   cameraContainer: {

@@ -37,69 +37,20 @@ const HistoryScreen = ({ navigation }) => {
   const loadScanHistory = async () => {
     try {
       setLoading(true);
-      // Always use fresh mock data to ensure names are included
-      // const historyData = await AsyncStorage.getItem('@scan_history');
-      // if (historyData) {
-      //   const history = JSON.parse(historyData);
-      //   setScanHistory(history.sort((a, b) => b.timestamp - a.timestamp));
-      // } else {
-        // Add some mock history data for demonstration
-        const mockHistory = [
-          {
-            id: '1',
-            timestamp: Date.now() - 86400000, // 1 day ago
-            data: {
-              serialNumber: 'KE-12345678-9',
-              idNumber: '12345678',
-              name: 'JOHN MWANGI KAMAU',
-              dateOfBirth: '15/03/1985',
-              sex: 'M',
-              districtOfBirth: 'NAIROBI',
-              placeOfIssue: 'NAIROBI',
-              dateOfIssue: '12/08/2020',
-              holdersSign: 'Present'
-            },
-            imageUri: 'https://via.placeholder.com/200x120/FF6B35/FFFFFF?text=ID+1'
-          },
-          {
-            id: '2',
-            timestamp: Date.now() - 172800000, // 2 days ago
-            data: {
-              serialNumber: 'KE-87654321-0',
-              idNumber: '87654321',
-              name: 'MARY AKINYI OCHIENG',
-              dateOfBirth: '22/07/1992',
-              sex: 'F',
-              districtOfBirth: 'MOMBASA',
-              placeOfIssue: 'MOMBASA',
-              dateOfIssue: '05/11/2019',
-              holdersSign: 'Present'
-            },
-            imageUri: 'https://via.placeholder.com/200x120/4CAF50/FFFFFF?text=ID+2'
-          },
-          {
-            id: '3',
-            timestamp: Date.now() - 259200000, // 3 days ago
-            data: {
-              serialNumber: 'KE-11223344-5',
-              idNumber: '11223344',
-              name: 'PETER KIPCHOGE ROTICH',
-              dateOfBirth: '10/12/1988',
-              sex: 'M',
-              districtOfBirth: 'KISUMU',
-              placeOfIssue: 'KISUMU',
-              dateOfIssue: '28/04/2021',
-              holdersSign: 'Present'
-            },
-            imageUri: 'https://via.placeholder.com/200x120/2196F3/FFFFFF?text=ID+3'
-          }
-        ];
-        setScanHistory(mockHistory);
-        await AsyncStorage.setItem('@scan_history', JSON.stringify(mockHistory));
-      // }
+      // Load only real scanned data from AsyncStorage
+      const historyData = await AsyncStorage.getItem('scanHistory');
+      if (historyData) {
+        const history = JSON.parse(historyData);
+        // Sort by timestamp (newest first)
+        setScanHistory(history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+      } else {
+        // No scan history yet
+        setScanHistory([]);
+      }
     } catch (error) {
       console.error('Error loading scan history:', error);
       Alert.alert('Error', 'Failed to load scan history');
+      setScanHistory([]);
     } finally {
       setLoading(false);
     }
@@ -113,15 +64,16 @@ const HistoryScreen = ({ navigation }) => {
 
     const filtered = scanHistory.filter(item => {
       const searchLower = searchQuery.toLowerCase();
+      const data = item.extractedData || {};
       return (
-        item.data.idNumber?.toLowerCase().includes(searchLower) ||
-        item.data.serialNumber?.toLowerCase().includes(searchLower) ||
-        item.data.name?.toLowerCase().includes(searchLower) ||
-        item.data.districtOfBirth?.toLowerCase().includes(searchLower) ||
-        item.data.placeOfIssue?.toLowerCase().includes(searchLower) ||
-        item.data.sex?.toLowerCase().includes(searchLower) ||
-        item.data.dateOfBirth?.toLowerCase().includes(searchLower) ||
-        item.data.dateOfIssue?.toLowerCase().includes(searchLower)
+        data.idNumber?.toLowerCase().includes(searchLower) ||
+        data.serialNumber?.toLowerCase().includes(searchLower) ||
+        data.name?.toLowerCase().includes(searchLower) ||
+        data.districtOfBirth?.toLowerCase().includes(searchLower) ||
+        data.placeOfIssue?.toLowerCase().includes(searchLower) ||
+        data.sex?.toLowerCase().includes(searchLower) ||
+        data.dateOfBirth?.toLowerCase().includes(searchLower) ||
+        data.dateOfIssue?.toLowerCase().includes(searchLower)
       );
     });
     setFilteredHistory(filtered);
@@ -135,22 +87,9 @@ const HistoryScreen = ({ navigation }) => {
 
   const handleItemPress = (item) => {
     navigation.navigate('Result', {
-      scanData: {
-        data: item.data,
-        confidence: {
-          serialNumber: 0.95,
-          idNumber: 0.98,
-          name: 0.96,
-          dateOfBirth: 0.92,
-          sex: 0.99,
-          districtOfBirth: 0.88,
-          placeOfIssue: 0.91,
-          dateOfIssue: 0.94,
-          holdersSign: 0.87
-        },
-        timestamp: item.timestamp
-      },
-      imageUri: item.imageUri
+      scanData: item.extractedData,
+      imageUri: item.imageUri,
+      rawText: item.rawText
     });
   };
 
@@ -167,7 +106,7 @@ const HistoryScreen = ({ navigation }) => {
             try {
               const updatedHistory = scanHistory.filter(item => item.id !== itemId);
               setScanHistory(updatedHistory);
-              await AsyncStorage.setItem('@scan_history', JSON.stringify(updatedHistory));
+              await AsyncStorage.setItem('scanHistory', JSON.stringify(updatedHistory));
             } catch (error) {
               console.error('Error deleting item:', error);
               Alert.alert('Error', 'Failed to delete item');
@@ -190,7 +129,7 @@ const HistoryScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               setScanHistory([]);
-              await AsyncStorage.removeItem('@scan_history');
+              await AsyncStorage.removeItem('scanHistory');
             } catch (error) {
               console.error('Error clearing history:', error);
               Alert.alert('Error', 'Failed to clear history');
@@ -273,25 +212,25 @@ const HistoryScreen = ({ navigation }) => {
               <View style={styles.itemContent}>
                 <View style={styles.itemHeader}>
                   <Text style={styles.itemTitle}>
-                    {item.data.name || 'Unknown Name'}
+                    {item.extractedData?.name || 'Unknown Name'}
                   </Text>
                   <Text style={styles.itemDate}>
-                    {formatDate(item.timestamp)}
+                    {formatDate(new Date(item.timestamp))}
                   </Text>
                 </View>
                 
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemDetail}>
-                    ID: {item.data.idNumber || 'N/A'}
+                    ID: {item.extractedData?.idNumber || 'N/A'}
                   </Text>
                   <Text style={styles.itemDetail}>
-                    Serial: {item.data.serialNumber || 'N/A'}
+                    Serial: {item.extractedData?.serialNumber || 'N/A'}
                   </Text>
                   <Text style={styles.itemDetail}>
-                    DOB: {item.data.dateOfBirth || 'N/A'}
+                    DOB: {item.extractedData?.dateOfBirth || 'N/A'}
                   </Text>
                   <Text style={styles.itemDetail}>
-                    District: {item.data.districtOfBirth || 'N/A'}
+                    District: {item.extractedData?.districtOfBirth || 'N/A'}
                   </Text>
                 </View>
               </View>
