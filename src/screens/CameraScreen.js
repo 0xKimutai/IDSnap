@@ -95,21 +95,24 @@ const CameraScreen = ({ navigation }) => {
     return Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
   };
 
+
   const parseOCRResult = (rawText) => {
     console.log('Parsing OCR text:', rawText);
     
     // Enhanced parsing logic for common ID card formats
     const lines = rawText.split('\n').map(line => line.trim()).filter(line => line);
+    console.log('Lines to parse:', lines);
     
     let extractedData = {
-      name: '',
+      serialNumber: '',
       idNumber: '',
+      name: '',
       dateOfBirth: '',
-      address: '',
-      issueDate: '',
-      expiryDate: '',
-      nationality: '',
-      gender: '',
+      sex: '',
+      districtOfBirth: '',
+      placeOfIssue: '',
+      dateOfIssue: '',
+      holdersSign: '',
       confidence: 0.85,
     };
 
@@ -121,6 +124,8 @@ const CameraScreen = ({ navigation }) => {
     lines.forEach((line, index) => {
       const upperLine = line.toUpperCase();
       const cleanLine = line.replace(/[^\w\s\-\.\/]/g, ' ').trim();
+      
+      console.log(`Line ${index}: "${line}" -> "${upperLine}"`);
 
       // Skip header lines
       if (upperLine.includes('REPUBLIC') || 
@@ -129,46 +134,77 @@ const CameraScreen = ({ navigation }) => {
           upperLine.includes('CARD') ||
           upperLine.includes('DOCUMENT') ||
           upperLine.length < 3) {
+        console.log(`Skipping header line: ${line}`);
         return;
       }
 
-      // NAME DETECTION - Enhanced patterns
-      if (!extractedData.name) {
-        // Look for name patterns
-        if (upperLine.includes('NAME') && line.includes(':')) {
-          const nameMatch = line.split(':')[1]?.trim();
-          if (nameMatch && nameMatch.length > 2) {
-            extractedData.name = nameMatch;
-          }
+      // SERIAL NUMBER DETECTION - Kenyan IDs have format like KE-12345678-9
+      if (!extractedData.serialNumber) {
+        const serialPattern = /KE[-\s]*\d{8,10}[-\s]*\d{1,2}/gi;
+        const serialMatch = line.match(serialPattern);
+        if (serialMatch) {
+          extractedData.serialNumber = serialMatch[0].replace(/\s+/g, '-');
+          console.log(`Found Serial Number: ${extractedData.serialNumber}`);
         }
-        // Name usually appears early, not containing numbers or common ID terms
-        else if (index > 0 && index < 5 && 
-                 !/\d|DATE|DOB|ADDRESS|ISSUED|EXPIRES|ID|NO/i.test(line) &&
-                 line.length > 3 && line.length < 50 &&
-                 /^[A-Za-z\s\-\.]+$/.test(line)) {
-          extractedData.name = line.trim();
+        // Also try to extract from the demo data format
+        else if (upperLine.includes('KE-') && /KE-\d{8}-\d/.test(line)) {
+          const match = line.match(/KE-\d{8}-\d/);
+          if (match) {
+            extractedData.serialNumber = match[0];
+            console.log(`Found Serial Number (demo): ${extractedData.serialNumber}`);
+          }
         }
       }
 
-      // ID NUMBER DETECTION - Multiple formats
-      const idPatterns = [
-        /\b\d{8,15}\b/g,              // 8-15 digit numbers
-        /[A-Z]\d{7,12}/g,             // Letter followed by 7-12 digits
-        /\d{2,4}[-\s]\d{3,6}[-\s]\d{3,6}/g, // Segmented numbers
-        /ID[:\s]*([A-Z0-9\-]{8,})/gi, // After "ID:" or "ID "
-        /NO[:\s]*([A-Z0-9\-]{8,})/gi, // After "NO:" or "NO "
-      ];
-      
-      idPatterns.forEach(pattern => {
-        const matches = line.match(pattern);
-        if (matches && !extractedData.idNumber) {
-          // Get the longest match (likely the ID number)
-          const longestMatch = matches.sort((a, b) => b.length - a.length)[0];
-          if (longestMatch.length >= 8) {
-            extractedData.idNumber = longestMatch.replace(/[^\w]/g, '');
-          }
+      // NAME DETECTION - For Kenyan ID format
+      if (!extractedData.name) {
+        // Skip header lines and look for name (usually appears after headers)
+        if (index >= 1 && index <= 4 && 
+            !upperLine.includes('REPUBLIC') && 
+            !upperLine.includes('NATIONAL') && 
+            !upperLine.includes('IDENTITY') &&
+            !upperLine.includes('ID NO') &&
+            !upperLine.includes('DATE') &&
+            !upperLine.includes('SEX') &&
+            !upperLine.includes('DISTRICT') &&
+            !upperLine.includes('PLACE') &&
+            !upperLine.includes('HOLDER') &&
+            /^[A-Za-z\s]+$/.test(line) &&
+            line.length > 5) {
+          extractedData.name = line.trim();
+          console.log(`Found Name: ${extractedData.name}`);
         }
-      });
+      }
+
+      // ID NUMBER DETECTION - Enhanced for Kenyan format
+      if (!extractedData.idNumber && upperLine.includes('ID NO')) {
+        const idMatch = line.split(':')[1]?.trim();
+        if (idMatch) {
+          extractedData.idNumber = idMatch;
+          console.log(`Found ID Number: ${idMatch}`);
+        }
+      }
+      
+      // Fallback ID patterns
+      if (!extractedData.idNumber) {
+        const idPatterns = [
+          /\b\d{8,15}\b/g,              // 8-15 digit numbers
+          /[A-Z]\d{7,12}/g,             // Letter followed by 7-12 digits
+          /\d{2,4}[-\s]\d{3,6}[-\s]\d{3,6}/g, // Segmented numbers
+        ];
+        
+        idPatterns.forEach(pattern => {
+          const matches = line.match(pattern);
+          if (matches && !extractedData.idNumber) {
+            // Get the longest match (likely the ID number)
+            const longestMatch = matches.sort((a, b) => b.length - a.length)[0];
+            if (longestMatch.length >= 8) {
+              extractedData.idNumber = longestMatch.replace(/[^\w]/g, '');
+              console.log(`Found ID Number (pattern): ${extractedData.idNumber}`);
+            }
+          }
+        });
+      }
 
       // DATE DETECTION - Enhanced patterns
       const datePatterns = [
@@ -177,6 +213,24 @@ const CameraScreen = ({ navigation }) => {
         /\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}\b/g,      // DD Month YYYY
       ];
 
+      // Specific date field detection for Kenyan ID
+      if (!extractedData.dateOfBirth && upperLine.includes('DATE OF BIRTH')) {
+        const dobMatch = line.split(':')[1]?.trim();
+        if (dobMatch) {
+          extractedData.dateOfBirth = dobMatch;
+          console.log(`Found Date of Birth: ${dobMatch}`);
+        }
+      }
+      
+      if (!extractedData.dateOfIssue && upperLine.includes('DATE OF ISSUE')) {
+        const issueMatch = line.split(':')[1]?.trim();
+        if (issueMatch) {
+          extractedData.dateOfIssue = issueMatch;
+          console.log(`Found Date of Issue: ${issueMatch}`);
+        }
+      }
+      
+      // Fallback date patterns
       datePatterns.forEach(pattern => {
         const matches = line.match(pattern);
         if (matches) {
@@ -184,13 +238,10 @@ const CameraScreen = ({ navigation }) => {
             // Context-based date assignment
             if ((upperLine.includes('DOB') || upperLine.includes('BIRTH') || upperLine.includes('BORN')) && !extractedData.dateOfBirth) {
               extractedData.dateOfBirth = date;
-            } else if ((upperLine.includes('ISSUE') || upperLine.includes('VALID FROM')) && !extractedData.issueDate) {
-              extractedData.issueDate = date;
-            } else if ((upperLine.includes('EXPIR') || upperLine.includes('VALID TO') || upperLine.includes('UNTIL')) && !extractedData.expiryDate) {
-              extractedData.expiryDate = date;
-            } else if (!extractedData.dateOfBirth && index < lines.length / 2) {
-              // Assume early dates are birth dates
-              extractedData.dateOfBirth = date;
+              console.log(`Found Date of Birth (pattern): ${date}`);
+            } else if ((upperLine.includes('ISSUE') || upperLine.includes('VALID FROM')) && !extractedData.dateOfIssue) {
+              extractedData.dateOfIssue = date;
+              console.log(`Found Date of Issue (pattern): ${date}`);
             }
           });
         }
@@ -223,13 +274,50 @@ const CameraScreen = ({ navigation }) => {
         }
       }
 
-      // GENDER DETECTION
-      if (!extractedData.gender) {
-        if (/\b(MALE|FEMALE|M|F)\b/i.test(line)) {
-          const genderMatch = line.match(/\b(MALE|FEMALE|M|F)\b/i);
-          if (genderMatch) {
-            extractedData.gender = genderMatch[1].toUpperCase();
+      // SEX DETECTION (Kenyan ID uses "SEX" not "GENDER")
+      if (!extractedData.sex) {
+        if (upperLine.includes('SEX') && line.includes(':')) {
+          const sexMatch = line.split(':')[1]?.trim();
+          if (sexMatch && /^[MF]$/i.test(sexMatch)) {
+            extractedData.sex = sexMatch.toUpperCase();
+            console.log(`Found Sex: ${extractedData.sex}`);
           }
+        } else if (/\b(MALE|FEMALE|M|F)\b/i.test(line)) {
+          const sexMatch = line.match(/\b(MALE|FEMALE|M|F)\b/i);
+          if (sexMatch) {
+            extractedData.sex = sexMatch[1].charAt(0).toUpperCase(); // Convert to M or F
+            console.log(`Found Sex (pattern): ${extractedData.sex}`);
+          }
+        }
+      }
+
+      // DISTRICT OF BIRTH DETECTION
+      if (!extractedData.districtOfBirth && upperLine.includes('DISTRICT OF BIRTH')) {
+        const districtMatch = line.split(':')[1]?.trim();
+        if (districtMatch) {
+          extractedData.districtOfBirth = districtMatch;
+          console.log(`Found District of Birth: ${districtMatch}`);
+        }
+      }
+
+      // PLACE OF ISSUE DETECTION
+      if (!extractedData.placeOfIssue && upperLine.includes('PLACE OF ISSUE')) {
+        const placeMatch = line.split(':')[1]?.trim();
+        if (placeMatch) {
+          extractedData.placeOfIssue = placeMatch;
+          console.log(`Found Place of Issue: ${placeMatch}`);
+        }
+      }
+
+      // HOLDER'S SIGNATURE DETECTION
+      if (!extractedData.holdersSign && upperLine.includes('HOLDER')) {
+        const signMatch = line.split(':')[1]?.trim();
+        if (signMatch) {
+          extractedData.holdersSign = signMatch;
+          console.log(`Found Holder's Sign: ${signMatch}`);
+        } else {
+          extractedData.holdersSign = 'Present';
+          console.log(`Found Holder's Sign: Present (default)`);
         }
       }
 
@@ -310,22 +398,16 @@ const CameraScreen = ({ navigation }) => {
         });
       }, 300);
 
+      console.log('Starting ML Kit text recognition for URI:', uri);
+      
       // Check if TextRecognition is available
       if (!TextRecognition || typeof TextRecognition.recognize !== 'function') {
-        throw new Error('Text recognition module not available. Please ensure the module is properly linked.');
+        throw new Error('ML Kit text recognition module not available. Please ensure the module is properly linked.');
       }
-
-      console.log('Starting text recognition for URI:', uri);
-      const recognitionResult = await TextRecognition.recognize(uri);
       
-      // Handle different response formats between platforms
-      let result;
-      if (Platform.OS === 'ios') {
-        result = recognitionResult;
-      } else {
-        // Android returns text directly in newer versions
-        result = recognitionResult.text || recognitionResult;
-      }
+      // Use ML Kit for real OCR
+      const result = await TextRecognition.recognize(uri);
+      console.log('Raw OCR result from ML Kit:', result);
       
       if (!result) {
         throw new Error('No text was recognized in the image');
@@ -345,9 +427,22 @@ const CameraScreen = ({ navigation }) => {
 
       // Navigate to results
       navigation.navigate('Result', {
+        scanData: {
+          data: extractedData,
+          confidence: {
+            serialNumber: extractedData.confidence || 0.85,
+            idNumber: extractedData.confidence || 0.85,
+            name: extractedData.confidence || 0.85,
+            dateOfBirth: extractedData.confidence || 0.85,
+            sex: extractedData.confidence || 0.85,
+            districtOfBirth: extractedData.confidence || 0.85,
+            placeOfIssue: extractedData.confidence || 0.85,
+            dateOfIssue: extractedData.confidence || 0.85,
+            holdersSign: extractedData.confidence || 0.85,
+          },
+          timestamp: Date.now()
+        },
         imageUri: uri,
-        ocrData: extractedData,
-        rawText: result,
       });
       
     } catch (error) {
@@ -545,22 +640,6 @@ const CameraScreen = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.cameraPreview}>
-            {/* Scanning Frame */}
-            {/* <View style={styles.scanFrame}>
-              <View style={styles.frameCorner} />
-              <View style={[styles.frameCorner, styles.topRight]} />
-              <View style={[styles.frameCorner, styles.bottomLeft]} />
-              <View style={[styles.frameCorner, styles.bottomRight]} /> */}
-              
-              {/* Animated Scan Line */}
-              {/* <Animated.View 
-                style={[
-                  styles.scanLine,
-                  { transform: [{ translateY: scanLineTranslateY }] }
-                ]} 
-              />
-            </View> */}
-            
             <Text style={styles.instructionText}>
               Your Preview will Appear Here
             </Text>

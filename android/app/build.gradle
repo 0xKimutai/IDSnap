@@ -110,6 +110,9 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    
+    // Google Play Services for ML Kit
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.0'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
